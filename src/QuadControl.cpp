@@ -201,7 +201,21 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  //printf("AltitudeControl velZCmd: %f %f %f\n", velZCmd, -maxAscentRate, maxDescentRate);
 
+  float pos_z_err = posZCmd - posZ;
+  float vel_z_err = CONSTRAIN(velZCmd, -maxAscentRate, maxDescentRate) - velZ;
+  integratedAltitudeError += pos_z_err * dt;
+
+  float z_dot_dot = kpPosZ*pos_z_err + kpVelZ*vel_z_err + KiPosZ*integratedAltitudeError + accelZCmd;
+  //printf("AltitudeControl z_dot_dot: %f\n", z_dot_dot);
+
+  float u_1_bar = z_dot_dot - float(CONST_GRAVITY);
+  float acc = u_1_bar / R(2, 2);
+
+  thrust = -acc * mass;
+  //thrust = CONSTRAIN(thrust, minMotorThrust, maxMotorThrust);
+  //printf("AltitudeControl thrust: %f\n", thrust);
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -239,7 +253,21 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  vel.z = 0;
 
+  if (velCmd.mag() > maxSpeedXY) {
+    velCmd = maxSpeedXY*velCmd / velCmd.mag();
+  }
+
+  V3F posErr = posCmd - pos;
+  V3F velErr = velCmd - vel;
+
+  accelCmd += posErr*kpPosXY + velErr*kpVelXY;
+  accelCmd.z = 0;
+
+  if (accelCmd.mag() > maxAccelXY) {
+    accelCmd = maxAccelXY * accelCmd / accelCmd.mag();
+  }
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -262,6 +290,17 @@ float QuadControl::YawControl(float yawCmd, float yaw)
   float yawRateCmd=0;
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  float yawErr = fmodf(yawCmd - yaw, 2*M_PI);
+
+  if (yawErr < - M_PI) {
+    yawErr = yawErr + 2*M_PI;
+  } else if (yawErr > M_PI) {
+    yawErr = yawErr - 2*M_PI;
+  }
+
+  //printf("YawControl yawErr: %f\n", yawErr);
+
+  yawRateCmd = yawErr * kpYaw;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
